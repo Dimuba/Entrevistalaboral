@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prepárate para el Éxito: Simulador de Entrevistas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    p {
+      font-size: 18px;
+      color: #555;
+    }
+    button {
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      color: white;
+    }
+    button.color1 { background-color: #007bff; }
+    button.color2 { background-color: #6c757d; }
+    button.color3 { background-color: #ffc107; }
+    button.color1:hover { background-color: #0056b3; }
+    button.color2:hover { background-color: #5a6268; }
+    button.color3:hover { background-color: #e0a800; }
+    .hidden {
+      display: none;
+    }
+    .result {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    #restartButton {
+      background-color: #28a745;
+    }
+    #restartButton:hover {
+      background-color: #1e7e34;
+    }
+    #backToStartButton {
+      background-color: #dc3545;
+    }
+    #backToStartButton:hover {
+      background-color: #bd2130;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Prepárate para el Éxito: Simulador de Entrevistas 🎮</h1>
+    <p id="question">Has sido notificado de tu entrevista con tres días de anticipación. Tienes tiempo para prepararte. ¿Qué haces?</p>
+    <div id="options">
+      <button class="color1" onclick="handleAnswer(3, 'prepared')">Investigas la empresa, su misión, valores y revisas la descripción del puesto.</button>
+      <button class="color2" onclick="handleAnswer(2)">Practicas respuestas con un amigo o frente al espejo.</button>
+      <button class="color3" onclick="handleAnswer(-2)">No preparas nada y decides improvisar.</button>
+    </div>
+    <button id="backToStartButton" class="hidden" onclick="goBackToStart()">Volver al inicio</button>
+    <p id="feedback" class="hidden"></p>
+    <p id="score" class="hidden">Puntuación final: <span id="currentScore">0</span></p>
+    <p id="finalResult" class="result hidden"></p>
+    <button id="restartButton" class="hidden" onclick="restartGame()">Intentémoslo de nuevo</button>
+  </div>
+
+  <script>
+    let currentScore = 0;
+    let currentStep = 0;
+    let prepared = false; // Variable para rastrear si investigó la empresa
+    let rested = true; // Variable para rastrear si descansó bien
+    let onTime = true; // Variable para rastrear si llegó a tiempo
+    let stressed = false; // Variable para rastrear si está estresado
+
+    const steps = [
+      {
+        question: "La noche anterior:",
+        options: [
+          { text: "Descansas bien y preparas tu ropa y documentos con anticipación.", points: 2, action: () => rested = true },
+          { text: "Te acuestas tarde viendo TV o saliendo con amigos.", points: -1, action: () => rested = false },
+          { text: "Olvidas revisar los detalles y te confundes con la hora de la entrevista.", points: -3, action: () => onTime = false }
+        ]
+      },
+      {
+        question: "Llegaste tarde a la entrevista. El entrevistador ya estaba esperando. ¿Qué haces?",
+        condition: () => !onTime,
+        options: [
+          { text: "Te disculpas sinceramente y explicas que tuviste un contratiempo.", points: 1 },
+          { text: "Intentas justificarte culpando al tráfico o a otros factores externos.", points: -2 },
+          { text: "Ignoras el retraso y actúas como si nada hubiera pasado.", points: -3 }
+        ]
+      },
+      {
+        question: "Llegas a la empresa 15 minutos antes de la entrevista. La recepcionista te pide que tomes asiento mientras el entrevistador está por llegar. ¿Qué haces?",
+        condition: () => onTime,
+        options: [
+          { text: "Sacas tu teléfono y revisas redes sociales.", points: -1 },
+          { text: "Repasas mentalmente tus respuestas y revisas tu currículum.", points: 2 },
+          { text: "Intentas conversar con la recepcionista sobre la empresa.", points: 1 }
+        ]
+      },
+      {
+        question: "Primera pregunta del entrevistador: 'Cuéntame sobre ti y tu experiencia profesional.'",
+        options: [
+          { text: "Respondes con una historia larga y poco estructurada.", points: 0 },
+          { text: "Resumes tu experiencia con ejemplos concretos relacionados con el puesto.", points: 2 },
+          { text: "Das una respuesta muy breve sin explicar mucho.", points: -1 }
+        ]
+      },
+      {
+        question: "Segunda pregunta: '¿Por qué quieres trabajar con nosotros?'",
+        options: [
+          { text: "Respondes que buscas cualquier trabajo disponible.", points: -2 },
+          { text: "Mencionas que admiras la empresa y cómo tu perfil encaja con sus valores y objetivos.", points: 2, condition: () => prepared },
+          { text: "Hablas solo de beneficios personales como sueldo y horarios.", points: 0 }
+        ]
+      },
+      {
+        question: "Tercera pregunta: 'Cuéntame sobre un desafío que enfrentaste y cómo lo resolviste.'",
+        options: [
+          { text: "Dices que nunca has enfrentado grandes desafíos.", points: -2 },
+          { text: "Narras un problema real, explicas tu rol y cómo lograste solucionarlo con un buen resultado.", points: 3 },
+          { text: "Culpas a un compañero o a la empresa anterior sin reflexionar en la solución.", points: -2 }
+        ]
+      },
+      {
+        question: "Cuarta pregunta: '¿Cómo manejas el trabajo bajo presión?'",
+        options: [
+          { text: "Explicas una estrategia clara que usas para manejar el estrés y cumplir con los plazos.", points: 2 },
+          { text: "Dices que simplemente trabajas más rápido sin más detalles.", points: 0 },
+          { text: "Mencionas que te cuesta manejar la presión y te estresas fácilmente.", points: -2, action: () => stressed = true }
+        ]
+      },
+      {
+        question: "Quinta pregunta (solo si mencionaste estar estresado): '¿Qué harías para mejorar tu manejo del estrés?'",
+        condition: () => stressed,
+        options: [
+          { text: "Tomaría cursos de manejo del estrés y aprendería técnicas de respiración.", points: 2 },
+          { text: "Ignoraría el problema y seguiría trabajando igual.", points: -1 },
+          { text: "Pediría ayuda a un terapeuta o coach.", points: 3 }
+        ]
+      },
+      {
+        question: "Última pregunta: '¿Tienes alguna pregunta para nosotros?'",
+        options: [
+          { text: "Dices que no tienes preguntas.", points: -1 },
+          { text: "Preguntas sobre la cultura de la empresa o sobre el equipo con el que trabajarás.", points: 2 },
+          { text: "Preguntas solo sobre salario y beneficios sin tocar otros temas.", points: 1 }
+        ]
+      }
+    ];
+
+    function handleAnswer(points, flag) {
+      if (flag === 'prepared') prepared = true;
+      currentScore += points;
+
+      if (currentStep < steps.length) {
+        showNextQuestion();
+      } else {
+        showFinalResult();
+      }
+
+      document.getElementById("backToStartButton").classList.remove("hidden");
+    }
+
+    function goBackToStart() {
+      alert(`Tu puntuación hasta ahora es: ${currentScore}`);
+      restartGame();
+    }
+
+    function showNextQuestion() {
+      const currentStepData = steps[currentStep];
+      if (currentStepData.condition && !currentStepData.condition()) {
+        currentStep++;
+        showNextQuestion();
+        return;
+      }
+
+      document.getElementById("question").textContent = currentStepData.question;
+
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+
+      currentStepData.options.forEach(option => {
+        if (!option.condition || option.condition()) {
+          const button = document.createElement("button");
+          button.textContent = option.text;
+          button.onclick = () => {
+            if (option.action) option.action();
+            handleAnswer(option.points);
+          };
+          button.className = `color${Math.floor(Math.random() * 3) + 1}`;
+          optionsDiv.appendChild(button);
+        }
+      });
+
+      currentStep++;
+    }
+
+    function showFinalResult() {
+      const resultElement = document.getElementById("finalResult");
+      resultElement.classList.remove("hidden");
+
+      if (currentScore >= 10) {
+        resultElement.textContent = "🎉 ¡Entrevista excelente! Has dejado una gran impresión. Pronto recibirás una oferta.";
+      } else if (currentScore >= 4 && currentScore <= 9) {
+        resultElement.textContent = "😐 Entrevista regular. Te agradecen por venir, pero no estás seguro de si serás seleccionado.";
+      } else {
+        resultElement.textContent = "😕 Entrevista mala. El entrevistador parece poco convencido. Te despide con un 'te llamaremos'.";
+      }
+
+      document.getElementById("currentScore").textContent = currentScore;
+      document.getElementById("score").classList.remove("hidden");
+      document.getElementById("options").innerHTML = "";
+      document.getElementById("question").textContent = "Fin de la simulación.";
+      document.getElementById("restartButton").classList.remove("hidden");
+      document.getElementById("backToStartButton").classList.add("hidden");
+    }
+
+    function restartGame() {
+      currentScore = 0;
+      currentStep = 0;
+      prepared = false;
+      rested = true;
+      onTime = true;
+      stressed = false;
+
+      document.getElementById("currentScore").textContent = currentScore;
+      document.getElementById("score").classList.add("hidden");
+      document.getElementById("finalResult").classList.add("hidden");
+      document.getElementById("restartButton").classList.add("hidden");
+      document.getElementById("backToStartButton").classList.add("hidden");
+
+      document.getElementById("question").textContent = "Has sido notificado de tu entrevista con tres días de anticipación. Tienes tiempo para prepararte. ¿Qué haces?";
+
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = `
+        <button class="color1" onclick="handleAnswer(3, 'prepared')">Investigas la empresa, su misión, valores y revisas la descripción del puesto.</button>
+        <button class="color2" onclick="handleAnswer(2)">Practicas respuestas con un amigo o frente al espejo.</button>
+        <button class="color3" onclick="handleAnswer(-2)">No preparas nada y decides improvisar.</button>
+      `;
+    }
+  </script>
+</body>
+</html>
